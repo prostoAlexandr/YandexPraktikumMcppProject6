@@ -11,4 +11,6 @@ void TaskDispatcher::schedule(TaskPriority priority, std::function<void()> task)
     m_queue->push(priority, task);
 }
 
-} // namespace dispatcher
+TaskDispatcher::~TaskDispatcher() { m_queue->shutdown(); }
+
+}  // namespace dispatcher

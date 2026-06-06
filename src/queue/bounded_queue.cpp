@@ -6,20 +6,17 @@
 namespace dispatcher::queue {
 
 // здесь ваш код
-BoundedQueue::BoundedQueue(int capacity) : m_cap(capacity), m_finished(false) {}
+BoundedQueue::BoundedQueue(int capacity) : m_cap(capacity) {}
 
 void BoundedQueue::push(task_t task) {
     std::unique_lock lk(m_mutex);
-    m_cv.wait(lk, [this] { return m_queue.size() < m_cap || m_finished; });
-    if (m_finished) {
-        return;
-    }
+    m_cv.wait(lk, [this] { return m_queue.size() < m_cap; });
     m_queue.push(task);
 }
 
 std::optional<task_t> BoundedQueue::try_pop() {
     std::unique_lock lk(m_mutex);
-    if (m_queue.empty() || m_finished) {
+    if (m_queue.empty()) {
         return {};
     }
 
@@ -30,9 +27,6 @@ std::optional<task_t> BoundedQueue::try_pop() {
     return result;
 }
 
-BoundedQueue::~BoundedQueue() {
-    m_finished = true;
-    m_cv.notify_all();
-}
+BoundedQueue::~BoundedQueue() { m_cv.notify_all(); }
 
-} // namespace dispatcher::queue
+}  // namespace dispatcher::queue

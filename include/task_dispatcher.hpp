@@ -17,7 +17,7 @@ class TaskDispatcher {
 
 public:
     TaskDispatcher(size_t thread_count, const queue::options_list_t &options = {
-                                            {.bounded = true, .capacity = 1000},
+                                            {.bounded = true, .capacity = 1'000},
                                             {.bounded = false, .capacity = std::nullopt}});
 
     void schedule(TaskPriority priority, std::function<void()> task);

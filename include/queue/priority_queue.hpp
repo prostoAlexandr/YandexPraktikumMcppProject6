@@ -16,6 +16,10 @@
 
 namespace dispatcher::queue {
 
+class ConfigurationError : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
 class PriorityQueue {
     // здесь ваш код
     std::vector<std::unique_ptr<IQueue>> m_queues;
@@ -24,7 +28,7 @@ class PriorityQueue {
     std::condition_variable m_cv;
 
 public:
-    explicit PriorityQueue(const options_list_t& options);
+    explicit PriorityQueue(const options_list_t &options);
 
     void push(TaskPriority priority, task_t task);
     // block on pop until shutdown is called

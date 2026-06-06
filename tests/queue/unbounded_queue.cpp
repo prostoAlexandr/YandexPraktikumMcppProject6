@@ -28,52 +28,56 @@ TEST(UnboundedQueueTest, SingleThreadCheck) {
 
 TEST(UnboundedQueueTest, DoubleThreadCheck) {
     UnboundedQueue uq;
-    std::jthread th([&uq] {
+    std::atomic<int> counter = 0;
+    std::jthread th([&uq, &counter] {
         for (int i = 0; i <= 100'000; ++i) {
-            uq.push([i] { auto square = i * i; });
+            uq.push([&counter] { ++counter; });
         }
     });
 
-    int counter = 0;
-    while (counter < 100'000) {
+    int limit = 0;
+    while (limit < 100'000) {
         auto task = uq.try_pop();
         if (task.has_value()) {
             ++counter;
+            ++limit;
             task.value()();
         }
     }
-    EXPECT_EQ(counter, 100'000);
+    EXPECT_EQ(counter, 200'000);
 }
 
 TEST(UnboundedQueueTest, MultipleSendersCheck) {
     UnboundedQueue uq;
+    std::atomic<int> counter = 0;
     std::vector<std::jthread> th_vec;
     for (int i = 0; i < 100; ++i) {
-        th_vec.emplace_back([&uq] {
+        th_vec.emplace_back([&uq, &counter] {
             for (int i = 0; i <= 1'000; ++i) {
-                uq.push([i] { auto square = i * i; });
+                uq.push([&counter] { ++counter; });
             }
         });
     }
 
-    int counter = 0;
-    while (counter < 100'000) {
+    int limit = 0;
+    while (limit < 100'000) {
         auto task = uq.try_pop();
         if (task.has_value()) {
             ++counter;
+            ++limit;
             task.value()();
         }
     }
-    EXPECT_EQ(counter, 100'000);
+    EXPECT_EQ(counter, 200'000);
 }
 
 TEST(UnboundedQueueTest, MultipleReceiversCheck) {
     UnboundedQueue uq;
+    std::atomic<int> counter = 0;
     for (int i = 0; i < 100'000; ++i) {
-        uq.push([&i] { auto square = i * i; });
+        uq.push([&counter] { ++counter; });
     }
 
-    std::atomic<int> counter = 0;
     {
         std::vector<std::jthread> th_vec;
         for (int i = 0; i < 100; ++i) {
@@ -90,5 +94,36 @@ TEST(UnboundedQueueTest, MultipleReceiversCheck) {
             });
         }
     }
-    EXPECT_EQ(counter, 100'000);
+    EXPECT_EQ(counter, 200'000);
+}
+
+TEST(UnboundedQueueTest, MultiRecMultiSendCheck) {
+    UnboundedQueue uq;
+    std::atomic<int> counter = 0;
+    std::vector<std::jthread> th_vec;
+    for (int i = 0; i < 100; ++i) {
+        th_vec.emplace_back([&uq, &counter] {
+            for (int i = 0; i <= 1'000; ++i) {
+                uq.push([&counter] { ++counter; });
+            }
+        });
+    }
+
+    {
+        std::vector<std::jthread> th_vec;
+        for (int i = 0; i < 100; ++i) {
+            th_vec.emplace_back([&counter, &uq] {
+                int limit = 0;
+                while (limit < 1'000) {
+                    auto task = uq.try_pop();
+                    if (task.has_value()) {
+                        ++counter;
+                        ++limit;
+                        task.value()();
+                    }
+                }
+            });
+        }
+    }
+    EXPECT_EQ(counter, 200'000);
 }

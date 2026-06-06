@@ -1,6 +1,5 @@
 #pragma once
 #include "queue/queue.hpp"
-#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <queue>
@@ -12,7 +11,6 @@ class BoundedQueue : public IQueue {
     std::queue<task_t> m_queue;
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::atomic_bool m_finished;
     int m_cap;
 
 public:
