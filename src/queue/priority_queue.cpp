@@ -2,6 +2,7 @@
 #include "queue/queue.hpp"
 #include "queue/unbounded_queue.hpp"
 #include "types.hpp"
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <mutex>
@@ -40,7 +41,8 @@ void PriorityQueue::push(TaskPriority priority, task_t task) {
     std::unique_lock lk(m_mutex);
     m_queues[(int)priority]->push(std::move(task));
     lk.unlock();
-    m_cv.notify_one();
+    m_pops.fetch_add(1, std::memory_order::release);
+    m_pops.notify_one();
 }
 
 std::optional<task_t> PriorityQueue::pop() {
@@ -52,16 +54,20 @@ std::optional<task_t> PriorityQueue::pop() {
                 return result;
             }
         }
-        if (m_finished) {
+        if (m_finished.load(std::memory_order::relaxed)) {
             return {};
         }
-        m_cv.wait(lk);
+        auto curr_pops = m_pops.load(std::memory_order::relaxed);
+        lk.unlock();
+        m_pops.wait(curr_pops, std::memory_order::acquire);
+        lk.lock();
     }
 }
 
 void PriorityQueue::shutdown() {
-    m_finished = true;
-    m_cv.notify_all();
+    m_finished.store(true, std::memory_order::relaxed);
+    m_pops.fetch_add(1, std::memory_order::release);
+    m_pops.notify_all();
 }
 
 PriorityQueue::~PriorityQueue() { shutdown(); }

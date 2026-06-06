@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <memory>
@@ -25,7 +26,7 @@ class PriorityQueue {
     std::vector<std::unique_ptr<IQueue>> m_queues;
     std::atomic_bool m_finished;
     std::mutex m_mutex;
-    std::condition_variable m_cv;
+    std::atomic<int64_t> m_pops;
 
 public:
     explicit PriorityQueue(const options_list_t &options);

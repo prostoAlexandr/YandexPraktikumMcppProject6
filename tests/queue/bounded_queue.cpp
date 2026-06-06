@@ -7,7 +7,7 @@ using namespace std::chrono_literals;
 using namespace dispatcher::queue;
 
 // здесь ваш код
-TEST(BoundedQueue, SingleThreadCheck) {
+TEST(BoundedQueueTest, SingleThreadCheck) {
     BoundedQueue bq(1'000);
     int counter = 0;
     for (int i = 0; i < 1'000; ++i) {
